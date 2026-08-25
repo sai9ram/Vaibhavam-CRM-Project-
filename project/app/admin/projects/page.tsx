@@ -141,7 +141,7 @@ export default function ProjectsPage() {
                     <Input value={form.package_name} onChange={e => setForm({ ...form, package_name: e.target.value })} placeholder="Premium Gold" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Package Amount ($)</Label>
+                    <Label>Package Amount (₹)</Label>
                     <Input type="number" value={form.package_amount} onChange={e => setForm({ ...form, package_amount: e.target.value })} placeholder="5000" />
                   </div>
                 </div>

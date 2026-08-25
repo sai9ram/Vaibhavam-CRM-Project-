@@ -459,7 +459,7 @@ export default function ProjectDetailPage() {
             <h3 className="font-serif text-lg mb-4">Payment Records</h3>
             {/* Add payment form */}
             <div className="flex flex-col sm:flex-row gap-3 mb-6 p-4 rounded-lg bg-muted/50">
-              <Input type="number" placeholder="Amount ($)" value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} className="w-full sm:w-32" />
+              <Input type="number" placeholder="Amount (₹)" value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} className="w-full sm:w-32" />
               <Select value={paymentForm.type} onValueChange={v => setPaymentForm({ ...paymentForm, type: v })}>
                 <SelectTrigger className="w-full sm:w-36"><SelectValue /></SelectTrigger>
                 <SelectContent>
