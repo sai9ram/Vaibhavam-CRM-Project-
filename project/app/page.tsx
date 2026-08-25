@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Camera, Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase/client';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,12 +19,30 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     if (!loading && user && profile) {
       redirectByRole(profile.role, router);
     }
   }, [user, profile, loading, router]);
+
+  async function handleForgotPassword() {
+    if (!email) {
+      toast.error('Please enter your email address first.');
+      return;
+    }
+    setResetting(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Password reset link sent to your email.');
+    }
+    setResetting(false);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -112,8 +132,13 @@ export default function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <button type="button" className="text-xs text-primary hover:underline">
-                  Forgot password?
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={resetting}
+                  className="text-xs text-primary hover:underline disabled:opacity-50"
+                >
+                  {resetting ? 'Sending...' : 'Forgot password?'}
                 </button>
               </div>
               <div className="relative">
