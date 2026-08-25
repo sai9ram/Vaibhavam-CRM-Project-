@@ -55,7 +55,14 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left panel — brand */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-luxe">
+      <div
+        className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-cover bg-center"
+        style={{
+          backgroundImage: "linear-gradient(135deg, rgba(112, 24, 45, 0.85), rgba(59, 12, 27, 0.72)), url('/signup-bg.png')",
+          backgroundPosition: 'center',
+          backgroundSize: 'cover',
+        }}
+      >
         <div className="absolute inset-0 opacity-20" style={{
           backgroundImage: 'radial-gradient(circle at 30% 20%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(255,255,255,0.15) 0%, transparent 50%)'
         }} />
