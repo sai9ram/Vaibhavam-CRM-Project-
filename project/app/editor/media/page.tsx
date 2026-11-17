@@ -64,7 +64,7 @@ export default function EditorMediaPage() {
         <Card className="p-12 text-center">
           <ImageIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
           <h3 className="font-serif text-lg mb-2">No media uploaded</h3>
-          <p className="text-muted-foreground text-sm">Upload media from a project's media tab.</p>
+          <p className="text-muted-foreground text-sm">Upload media from a project&apos;s media tab.</p>
         </Card>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

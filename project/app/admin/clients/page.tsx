@@ -93,11 +93,11 @@ export default function ClientsPage() {
               <div className="space-y-4 py-2">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Bride's Name</Label>
+                    <Label>Bride&apos;s Name</Label>
                     <Input value={form.bride_name} onChange={e => setForm({ ...form, bride_name: e.target.value })} placeholder="Jane" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Groom's Name</Label>
+                    <Label>Groom&apos;s Name</Label>
                     <Input value={form.groom_name} onChange={e => setForm({ ...form, groom_name: e.target.value })} placeholder="John" />
                   </div>
                 </div>
