@@ -10,7 +10,7 @@ import {
   Camera, LayoutDashboard, Users, FolderKanban, UserCog,
   Image, MessageSquare, BarChart3, LogOut, Menu, Settings, Calendar,
 } from 'lucide-react';
-import { getInitials } from '@/lib/format';
+import { getInitials, formatFileSize } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -48,11 +48,15 @@ const clientNav: NavItem[] = [
 export function DashboardLayout({ children, role }: { children: ReactNode; role: 'admin' | 'editor' | 'client' }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { profile, signOut } = useAuth();
+  const { profile, studio, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems = role === 'admin' ? adminNav : role === 'editor' ? editorNav : clientNav;
-  const roleLabel = role === 'admin' ? 'Super Admin' : role === 'editor' ? 'Editor' : 'Client';
+  const roleLabel = role === 'admin' ? 'Studio Owner' : role === 'editor' ? 'Editor' : 'Client';
+  const studioName = studio?.name || 'Vaibhavam CRM';
+  const storageUsed = studio?.storage_used_bytes ?? 0;
+  const storageLimit = studio?.storage_limit_bytes ?? 10 * 1024 * 1024 * 1024;
+  const storagePct = Math.min(100, Math.round((storageUsed / Math.max(1, storageLimit)) * 100));
 
   async function handleSignOut() {
     await signOut();
@@ -88,18 +92,43 @@ export function DashboardLayout({ children, role }: { children: ReactNode; role:
     return (
       <div className="flex flex-col h-full">
         <div className="flex items-center gap-3 px-6 py-6 border-b border-border">
-          <div className="w-9 h-9 rounded-lg bg-gradient-luxe flex items-center justify-center">
+          <div
+            className="w-9 h-9 rounded-lg bg-gradient-luxe flex items-center justify-center shrink-0"
+            style={studio?.brand_color ? { background: studio.brand_color } : undefined}
+          >
             <Camera className="w-5 h-5 text-white" />
           </div>
-          <div>
-            <div className="font-serif text-lg leading-none">Vaibhavam CRM</div>
-            <div className="text-xs text-muted-foreground mt-0.5">CRM Platform</div>
+          <div className="min-w-0">
+            <div className="font-serif text-lg leading-none truncate">{studioName}</div>
+            <div className="text-xs text-muted-foreground mt-0.5 capitalize">
+              {studio ? `${studio.plan} plan` : 'CRM Platform'}
+            </div>
           </div>
         </div>
 
         <div className="flex-1 py-4 overflow-y-auto scrollbar-thin">
           <NavList />
         </div>
+
+        {role === 'admin' && studio && (
+          <div className="px-4 py-3 border-t border-border bg-muted/30">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="text-muted-foreground font-medium">Storage Used</span>
+              <span className="text-foreground font-medium">
+                {formatFileSize(storageUsed)} / {formatFileSize(storageLimit)}
+              </span>
+            </div>
+            <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+              <div
+                className={cn(
+                  'h-full rounded-full transition-all',
+                  storagePct > 90 ? 'bg-destructive' : 'bg-primary'
+                )}
+                style={{ width: `${storagePct}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="border-t border-border p-4">
           <div className="flex items-center gap-3 mb-3">

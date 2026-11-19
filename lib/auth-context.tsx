@@ -1,15 +1,17 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
-import type { Profile, UserRole } from '@/types/database';
+import type { Profile, Studio } from '@/types/database';
 
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
+  studio: Studio | null;
   loading: boolean;
+  refreshStudio: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string, phone: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -21,7 +23,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [studio, setStudio] = useState<Studio | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const loadStudio = useCallback(async (studioId?: string | null) => {
+    if (!studioId) {
+      setStudio(null);
+      return;
+    }
+    const { data, error } = await supabase
+      .from('studios')
+      .select('*')
+      .eq('id', studioId)
+      .maybeSingle();
+    if (!error && data) {
+      setStudio(data as Studio);
+    }
+  }, []);
+
+  const loadProfile = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    setProfile(data);
+    await loadStudio(data?.studio_id);
+    setLoading(false);
+  }, [loadStudio]);
+
+  const refreshStudio = useCallback(async () => {
+    if (profile?.studio_id) {
+      await loadStudio(profile.studio_id);
+    }
+  }, [profile?.studio_id, loadStudio]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -34,29 +69,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         loadProfile(session.user.id);
       } else {
         setProfile(null);
+        setStudio(null);
         setLoading(false);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
-
-  async function loadProfile(userId: string) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    setProfile(data);
-    setLoading(false);
-  }
+  }, [loadProfile]);
 
   async function signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -75,10 +101,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signOut() {
     await supabase.auth.signOut();
     setProfile(null);
+    setStudio(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, studio, loading, refreshStudio, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );

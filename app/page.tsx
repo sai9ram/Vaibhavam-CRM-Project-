@@ -187,6 +187,12 @@ export default function LoginPage() {
               Create an account
             </Link>
           </p>
+          <p className="text-center text-sm text-muted-foreground mt-2">
+            Own a photography business?{' '}
+            <Link href="/register-studio" className="text-primary hover:underline font-medium">
+              Start your free 14-day studio trial
+            </Link>
+          </p>
         </div>
       </div>
     </div>
