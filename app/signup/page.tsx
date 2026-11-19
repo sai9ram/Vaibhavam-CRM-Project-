@@ -71,7 +71,7 @@ export default function SignupPage() {
             <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
               <Camera className="w-6 h-6" />
             </div>
-            <span className="font-serif text-2xl tracking-wide">Vaibhavam CRM</span>
+            <span className="font-serif text-2xl tracking-wide">SureShotz</span>
           </Link>
           <div>
             <Sparkles className="w-8 h-8 mb-4 opacity-80" />
@@ -107,7 +107,7 @@ export default function SignupPage() {
               <div className="w-10 h-10 rounded-xl bg-gradient-luxe flex items-center justify-center">
                 <Camera className="w-5 h-5 text-white" />
               </div>
-              <span className="font-serif text-xl text-gradient-luxe">Vaibhavam CRM</span>
+              <span className="font-serif text-xl text-gradient-luxe">SureShotz</span>
             </Link>
           </div>
 
@@ -129,7 +129,7 @@ export default function SignupPage() {
           ) : (
             <>
               <h2 className="font-serif text-3xl mb-2">Create your account</h2>
-              <p className="text-muted-foreground mb-8">Join the Vaibhavam CRM client portal</p>
+              <p className="text-muted-foreground mb-8">Join the SureShotz client portal</p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">

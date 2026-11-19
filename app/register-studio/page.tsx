@@ -133,7 +133,7 @@ export default function RegisterStudioPage() {
             <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
               <Camera className="w-6 h-6" />
             </div>
-            <span className="font-serif text-2xl tracking-wide">Studio CRM</span>
+            <span className="font-serif text-2xl tracking-wide">SureShotz</span>
           </Link>
           <div>
             <Sparkles className="w-8 h-8 mb-4 opacity-80" />
@@ -171,7 +171,7 @@ export default function RegisterStudioPage() {
             <div className="w-9 h-9 rounded-lg bg-gradient-luxe flex items-center justify-center">
               <Camera className="w-5 h-5 text-white" />
             </div>
-            <span className="font-serif text-xl">Studio CRM</span>
+            <span className="font-serif text-xl">SureShotz</span>
           </div>
 
           <h2 className="font-serif text-3xl mb-2">Start your free studio trial</h2>

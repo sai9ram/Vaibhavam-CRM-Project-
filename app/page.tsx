@@ -74,7 +74,7 @@ export default function LoginPage() {
             <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
               <Camera className="w-6 h-6" />
             </div>
-            <span className="font-serif text-2xl tracking-wide">Vaibhavam CRM</span>
+            <span className="font-serif text-2xl tracking-wide">SureShotz</span>
           </div>
           <div>
             <Sparkles className="w-8 h-8 mb-4 opacity-80" />
@@ -109,7 +109,7 @@ export default function LoginPage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-luxe flex items-center justify-center">
               <Camera className="w-5 h-5 text-white" />
             </div>
-            <span className="font-serif text-xl text-gradient-luxe">Vaibhavam CRM</span>
+            <span className="font-serif text-xl text-gradient-luxe">SureShotz</span>
           </div>
 
           <h2 className="font-serif text-3xl mb-2">Welcome back</h2>

@@ -53,7 +53,7 @@ export function DashboardLayout({ children, role }: { children: ReactNode; role:
 
   const navItems = role === 'admin' ? adminNav : role === 'editor' ? editorNav : clientNav;
   const roleLabel = role === 'admin' ? 'Studio Owner' : role === 'editor' ? 'Editor' : 'Client';
-  const studioName = studio?.name || 'Vaibhavam CRM';
+  const studioName = studio?.name || 'SureShotz';
   const storageUsed = studio?.storage_used_bytes ?? 0;
   const storageLimit = studio?.storage_limit_bytes ?? 10 * 1024 * 1024 * 1024;
   const storagePct = Math.min(100, Math.round((storageUsed / Math.max(1, storageLimit)) * 100));

@@ -8,8 +8,8 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
 
 export const metadata: Metadata = {
-  title: 'Vaibhavam CRM',
-  description: 'Client management system for Vaibhavam CRM',
+  title: 'SureShotz',
+  description: 'Photography studio & client management platform by SureShotz',
 };
 
 export default function RootLayout({

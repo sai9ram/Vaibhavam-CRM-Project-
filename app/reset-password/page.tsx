@@ -50,7 +50,7 @@ export default function ResetPasswordPage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-luxe flex items-center justify-center">
               <Camera className="w-5 h-5 text-white" />
             </div>
-            <span className="font-serif text-xl text-gradient-luxe">Vaibhavam CRM</span>
+            <span className="font-serif text-xl text-gradient-luxe">SureShotz</span>
           </Link>
           <h2 className="font-serif text-3xl mt-4">Reset Password</h2>
           <p className="text-muted-foreground text-sm">Enter your new password below</p>
