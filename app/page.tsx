@@ -177,22 +177,20 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="text-center text-xs text-muted-foreground mt-8">
-            Vaibhavam CRM · Studio access only
-          </p>
-
-          <p className="text-center text-sm text-muted-foreground mt-4">
-            New client?{' '}
-            <Link href="/signup" className="text-primary hover:underline font-medium">
-              Create an account
-            </Link>
-          </p>
-          <p className="text-center text-sm text-muted-foreground mt-2">
-            Own a photography business?{' '}
-            <Link href="/register-studio" className="text-primary hover:underline font-medium">
-              Start your free 14-day studio trial
-            </Link>
-          </p>
+          <div className="mt-7 pt-5 border-t border-border/60 flex items-center justify-between gap-3 text-[13px] text-muted-foreground whitespace-nowrap">
+            <span>
+              New client?{' '}
+              <Link href="/signup" className="text-foreground hover:text-primary font-medium transition-colors">
+                Create account
+              </Link>
+            </span>
+            <span>
+              Studio owner?{' '}
+              <Link href="/register-studio" className="text-primary hover:underline font-medium">
+                Start free trial →
+              </Link>
+            </span>
+          </div>
         </div>
       </div>
     </div>
