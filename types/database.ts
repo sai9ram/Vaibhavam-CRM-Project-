@@ -51,8 +51,25 @@ export interface Studio {
   max_projects: number;
   max_team_members: number;
   is_active: boolean;
+  billing_provider?: string;
+  billing_customer_id?: string;
+  billing_subscription_id?: string;
+  current_period_end?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface BillingTransaction {
+  id: string;
+  studio_id: string;
+  provider: 'razorpay' | 'stripe';
+  provider_payment_id: string;
+  provider_order_id: string;
+  plan: Exclude<PlanTier, 'free_trial'>;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'paid' | 'failed';
+  created_at: string;
 }
 
 export interface AuditLog {
@@ -222,6 +239,7 @@ export interface Database {
   public: {
     Tables: {
       studios: { Row: Studio; Insert: Partial<Studio>; Update: Partial<Studio> };
+      billing_transactions: { Row: BillingTransaction; Insert: Partial<BillingTransaction>; Update: Partial<BillingTransaction> };
       audit_logs: { Row: AuditLog; Insert: Partial<AuditLog>; Update: Partial<AuditLog> };
       profiles: { Row: Profile; Insert: Partial<Profile>; Update: Partial<Profile> };
       clients: { Row: Client; Insert: Partial<Client>; Update: Partial<Client> };

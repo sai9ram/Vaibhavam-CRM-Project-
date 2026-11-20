@@ -8,8 +8,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   Camera, LayoutDashboard, Users, FolderKanban, UserCog,
-  Image, MessageSquare, BarChart3, LogOut, Menu, Settings, Calendar,
+  Image, MessageSquare, BarChart3, LogOut, Menu, Settings, Calendar, CreditCard,
 } from 'lucide-react';
+import { TrialBanner } from '@/components/trial-banner';
 import { getInitials, formatFileSize } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +28,7 @@ const adminNav: NavItem[] = [
   { label: 'Media', href: '/admin/media', icon: Image },
   { label: 'Messages', href: '/admin/messages', icon: MessageSquare },
   { label: 'Reports', href: '/admin/reports', icon: BarChart3 },
+  { label: 'Billing', href: '/admin/billing', icon: CreditCard },
   { label: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
@@ -183,6 +185,7 @@ export function DashboardLayout({ children, role }: { children: ReactNode; role:
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
+        {role === 'admin' && <TrialBanner />}
         <main className="flex-1 overflow-y-auto scrollbar-thin">
           {children}
         </main>
