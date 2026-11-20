@@ -18,7 +18,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({ clients: 0, activeProjects: 0, completedProjects: 0, pendingDeliveries: 0, revenue: 0 });
   const [recentProjects, setRecentProjects] = useState<(Project & { client: Client })[]>([]);
   const [revenueData, setRevenueData] = useState<{ month: string; revenue: number }[]>([]);
-  const [stageData, setStageData] = useState<{ stage: string; count: number }[]>([]);
+  const [stageData, setStageData] = useState<{ stage: string; fullStage: string; count: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -75,7 +75,8 @@ export default function AdminDashboard() {
 
     // Stage distribution
     const stageCounts = STAGE_NAMES.map((stage, i) => ({
-      stage: stage.replace(/\s/g, '\n'),
+      stage: `S${i + 1}`,
+      fullStage: `${i + 1}. ${stage}`,
       count: allProjects.filter(p => p.current_stage === i + 1).length,
     }));
     setStageData(stageCounts);
@@ -148,14 +149,19 @@ export default function AdminDashboard() {
         </Card>
 
         <Card className="p-5">
-          <h3 className="font-serif text-lg mb-4">Project Stages</h3>
+          <div className="mb-4">
+            <h3 className="font-serif text-lg">Project Stages</h3>
+            <p className="text-xs text-muted-foreground">Hover a bar (S1–S10) to see stage name</p>
+          </div>
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={stageData}>
+            <BarChart data={stageData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="stage" stroke="hsl(var(--muted-foreground))" fontSize={9} interval={0} />
+              <XAxis dataKey="stage" stroke="hsl(var(--muted-foreground))" fontSize={11} interval={0} tickLine={false} />
               <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} allowDecimals={false} />
               <Tooltip
                 contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
+                labelFormatter={(_, payload) => payload?.[0]?.payload?.fullStage || ''}
+                formatter={(v: number) => [v, 'Projects']}
               />
               <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
             </BarChart>

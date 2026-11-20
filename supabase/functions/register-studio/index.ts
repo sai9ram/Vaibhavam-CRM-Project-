@@ -110,7 +110,7 @@ Deno.serve(async (req: Request) => {
       email,
       password,
       email_confirm: true,
-      user_metadata: { full_name: fullName },
+      user_metadata: { full_name: fullName, phone },
       app_metadata: { role: "super_admin", studio_id: studio.id },
     });
 
@@ -123,24 +123,21 @@ Deno.serve(async (req: Request) => {
     }
     createdUserId = authData.user.id;
 
-    // 3. Link owner_id on studio and upsert profile
+    // 3. Link owner_id on studio and ensure profile is populated
     await supabaseAdmin
       .from("studios")
       .update({ owner_id: authData.user.id })
       .eq("id", studio.id);
 
-    const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
-      id: authData.user.id,
-      studio_id: studio.id,
-      role: "super_admin",
-      full_name: fullName,
-      phone,
-    });
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .update({ full_name: fullName, phone })
+      .eq("id", authData.user.id);
 
     if (profileError) {
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       await supabaseAdmin.from("studios").delete().eq("id", studio.id);
-      return jsonResponse({ error: "Could not finish setting up your profile." }, 500);
+      return jsonResponse({ error: `Could not finish setting up your profile: ${profileError.message}` }, 500);
     }
 
     await supabaseAdmin.from("audit_logs").insert({
