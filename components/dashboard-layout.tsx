@@ -92,12 +92,20 @@ export function DashboardLayout({ children, role }: { children: ReactNode; role:
     return (
       <div className="flex flex-col h-full">
         <div className="flex items-center gap-3 px-6 py-6 border-b border-border">
-          <div
-            className="w-9 h-9 rounded-lg bg-gradient-luxe flex items-center justify-center shrink-0"
-            style={studio?.brand_color ? { background: studio.brand_color } : undefined}
-          >
-            <Camera className="w-5 h-5 text-white" />
-          </div>
+          {studio?.logo_url ? (
+            <img
+              src={studio.logo_url}
+              alt={studioName}
+              className="w-9 h-9 rounded-lg object-cover border border-border shrink-0"
+            />
+          ) : (
+            <div
+              className="w-9 h-9 rounded-lg bg-gradient-luxe flex items-center justify-center shrink-0"
+              style={studio?.brand_color ? { background: studio.brand_color } : undefined}
+            >
+              <Camera className="w-5 h-5 text-white" />
+            </div>
+          )}
           <div className="min-w-0">
             <div className="font-serif text-lg leading-none truncate">{studioName}</div>
             <div className="text-xs text-muted-foreground mt-0.5 capitalize">

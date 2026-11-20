@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { PageHeader } from '@/components/page-header';
 import { Card } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import { getInitials, formatFileSize, formatDate } from '@/lib/format';
 import type { CurrencyCode } from '@/types/database';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase/client';
-import { Save, Building2, HardDrive } from 'lucide-react';
+import { Save, Building2, HardDrive, Palette, Upload, Trash2, Camera, Check } from 'lucide-react';
 
 const CURRENCIES: { value: CurrencyCode; label: string }[] = [
   { value: 'INR', label: 'INR (₹) — Indian Rupee' },
@@ -27,6 +27,15 @@ const CURRENCIES: { value: CurrencyCode; label: string }[] = [
   { value: 'SGD', label: 'SGD ($) — Singapore Dollar' },
 ];
 
+const COLOR_PALETTES = [
+  { name: 'Royal Crimson', color: '#82172f' },
+  { name: 'Champagne Gold', color: '#b8860b' },
+  { name: 'Emerald Forest', color: '#0f766e' },
+  { name: 'Midnight Slate', color: '#1e293b' },
+  { name: 'Plum Velvet', color: '#6d28d9' },
+  { name: 'Warm Terracotta', color: '#c2410c' },
+];
+
 const PLAN_LABELS: Record<string, string> = {
   free_trial: '14-Day Free Trial',
   starter: 'Starter Plan',
@@ -34,15 +43,43 @@ const PLAN_LABELS: Record<string, string> = {
   studio: 'Studio Plan',
 };
 
+function resizeImageToDataUrl(file: File, maxSize = 256): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read the selected image.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Invalid image file.'));
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const width = Math.max(1, Math.round(img.width * scale));
+        const height = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('Canvas is not supported in this browser.'));
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/png', 0.9));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function AdminSettingsPage() {
   const { profile, studio, user, refreshStudio } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [phone, setPhone] = useState(profile?.phone || '');
   const [savingProfile, setSavingProfile] = useState(false);
 
   const [studioName, setStudioName] = useState(studio?.name || '');
   const [currency, setCurrency] = useState<CurrencyCode>(studio?.currency || 'INR');
-  const [brandColor, setBrandColor] = useState(studio?.brand_color || '#b8860b');
+  const [brandColor, setBrandColor] = useState(studio?.brand_color || '#82172f');
+  const [logoUrl, setLogoUrl] = useState(studio?.logo_url || '');
   const [savingStudio, setSavingStudio] = useState(false);
 
   useEffect(() => {
@@ -56,9 +93,26 @@ export default function AdminSettingsPage() {
     if (studio) {
       setStudioName(studio.name || '');
       setCurrency(studio.currency || 'INR');
-      setBrandColor(studio.brand_color || '#b8860b');
+      setBrandColor(studio.brand_color || '#82172f');
+      setLogoUrl(studio.logo_url || '');
     }
   }, [studio]);
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file (PNG, JPG, or WebP).');
+      return;
+    }
+    try {
+      const dataUrl = await resizeImageToDataUrl(file, 256);
+      setLogoUrl(dataUrl);
+      toast.success('Logo loaded! Click "Save Studio Design" to apply it everywhere.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not load logo.');
+    }
+  }
 
   async function saveProfile() {
     if (!profile) return;
@@ -85,13 +139,14 @@ export default function AdminSettingsPage() {
         name: studioName.trim(),
         currency,
         brand_color: brandColor,
+        logo_url: logoUrl.trim(),
       })
       .eq('id', studio.id);
     if (error) {
       toast.error(error.message);
     } else {
       await refreshStudio();
-      toast.success('Studio settings saved.');
+      toast.success('Studio design and settings updated live!');
     }
     setSavingStudio(false);
   }
@@ -102,7 +157,7 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="p-6 lg:p-8 max-w-3xl mx-auto animate-fade-in space-y-6">
-      <PageHeader title="Settings" description="Manage your account, studio details, and storage plan" />
+      <PageHeader title="Settings" description="Manage your account, studio design, brand logo, and storage plan" />
 
       {/* Personal Profile */}
       <Card className="p-6">
@@ -138,18 +193,76 @@ export default function AdminSettingsPage() {
         </div>
       </Card>
 
-      {/* Studio Branding & Currency */}
+      {/* Studio Design, Color Palette & Brand Logo */}
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-1">
-          <Building2 className="w-5 h-5 text-primary" />
-          <h3 className="font-serif text-lg">Studio Details</h3>
+          <Palette className="w-5 h-5 text-primary" />
+          <h3 className="font-serif text-lg">Studio Design &amp; Branding</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-5">
-          This name and currency appear across your team dashboard and client portal.
+          Customize your studio name, brand logo, and color palette. Changes update across your dashboard and client portal in real time.
         </p>
 
         {studio ? (
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Brand Logo */}
+            <div className="space-y-2">
+              <Label>Brand Logo</Label>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border border-border bg-muted/20">
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt="Studio Logo Preview"
+                    className="w-16 h-16 rounded-xl object-cover border border-border shrink-0"
+                  />
+                ) : (
+                  <div
+                    className="w-16 h-16 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: brandColor }}
+                  >
+                    <Camera className="w-7 h-7 text-white" />
+                  </div>
+                )}
+                <div className="flex-1 space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="w-4 h-4 mr-1.5" /> Upload Logo
+                    </Button>
+                    {logoUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setLogoUrl('')}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1.5" /> Remove
+                      </Button>
+                    )}
+                  </div>
+                  <Input
+                    value={logoUrl.startsWith('data:') ? '' : logoUrl}
+                    onChange={e => setLogoUrl(e.target.value)}
+                    placeholder="Or paste a logo image URL (https://...)"
+                    className="text-xs h-8"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Studio Name & Currency */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Studio Name</Label>
@@ -161,39 +274,95 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Currency</Label>
-                <Select value={currency} onValueChange={v => setCurrency(v as CurrencyCode)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {CURRENCIES.map(c => (
-                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="space-y-2">
+              <Label>Currency</Label>
+              <Select value={currency} onValueChange={v => setCurrency(v as CurrencyCode)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map(c => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Color Palette Presets + Custom Picker */}
+            <div className="space-y-3">
+              <Label>Color Palette</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {COLOR_PALETTES.map(p => {
+                  const selected = brandColor.toLowerCase() === p.color.toLowerCase();
+                  return (
+                    <button
+                      key={p.color}
+                      type="button"
+                      onClick={() => setBrandColor(p.color)}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-left text-sm transition-all ${
+                        selected ? 'border-foreground bg-muted/60 font-medium' : 'border-border hover:bg-muted/30'
+                      }`}
+                    >
+                      <span
+                        className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center"
+                        style={{ background: p.color }}
+                      >
+                        {selected && <Check className="w-3 h-3 text-white" />}
+                      </span>
+                      <span className="truncate">{p.name}</span>
+                    </button>
+                  );
+                })}
               </div>
-              <div className="space-y-2">
-                <Label>Brand Accent Color</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="color"
-                    value={brandColor}
-                    onChange={e => setBrandColor(e.target.value)}
-                    className="w-14 h-10 p-1 cursor-pointer"
-                  />
-                  <Input value={brandColor} onChange={e => setBrandColor(e.target.value)} className="flex-1" />
+
+              <div className="flex items-center gap-2 pt-1">
+                <Input
+                  type="color"
+                  value={brandColor}
+                  onChange={e => setBrandColor(e.target.value)}
+                  className="w-12 h-9 p-1 cursor-pointer"
+                />
+                <Input
+                  value={brandColor}
+                  onChange={e => setBrandColor(e.target.value)}
+                  placeholder="#82172f"
+                  className="w-32 font-mono text-sm"
+                />
+                <span className="text-xs text-muted-foreground">Or pick any custom hex color</span>
+              </div>
+            </div>
+
+            {/* Live Preview */}
+            <div className="p-4 rounded-xl border border-border bg-card space-y-3">
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Live Preview</div>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="Preview" className="w-10 h-10 rounded-lg object-cover border border-border" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: brandColor }}>
+                      <Camera className="w-5 h-5 text-white" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <div className="font-serif text-base truncate">{studioName || 'Your Studio'}</div>
+                    <div className="text-xs text-muted-foreground">Client &amp; Team Portal</div>
+                  </div>
                 </div>
+                <span
+                  className="px-3 py-1.5 rounded-md text-xs font-medium text-white shrink-0"
+                  style={{ background: brandColor }}
+                >
+                  Sample Button
+                </span>
               </div>
             </div>
 
             <Button onClick={saveStudio} disabled={savingStudio} className="bg-gradient-luxe text-white">
-              <Save className="w-4 h-4 mr-2" /> {savingStudio ? 'Saving...' : 'Save Studio Details'}
+              <Save className="w-4 h-4 mr-2" /> {savingStudio ? 'Saving...' : 'Save Studio Design'}
             </Button>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Studio settings will appear here once the multi-tenant database update is applied.
+            Studio settings will appear here once your studio profile finishes loading.
           </p>
         )}
       </Card>
@@ -249,4 +418,3 @@ export default function AdminSettingsPage() {
     </div>
   );
 }
-
