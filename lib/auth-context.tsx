@@ -57,6 +57,7 @@ interface AuthContextValue {
   profile: Profile | null;
   studio: Studio | null;
   loading: boolean;
+  refreshProfile: () => Promise<void>;
   refreshStudio: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string, phone: string) => Promise<{ error: string | null }>;
@@ -99,6 +100,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await loadStudio(data?.studio_id);
     setLoading(false);
   }, [loadStudio]);
+
+  const refreshProfile = useCallback(async () => {
+    if (user?.id) {
+      await loadProfile(user.id);
+    }
+  }, [user?.id, loadProfile]);
 
   const refreshStudio = useCallback(async () => {
     if (profile?.studio_id) {
@@ -174,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, studio, loading, refreshStudio, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, studio, loading, refreshProfile, refreshStudio, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );

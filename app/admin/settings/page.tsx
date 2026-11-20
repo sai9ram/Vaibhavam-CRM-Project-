@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getInitials, formatFileSize, formatDate } from '@/lib/format';
 import type { CurrencyCode } from '@/types/database';
@@ -69,11 +69,13 @@ function resizeImageToDataUrl(file: File, maxSize = 256): Promise<string> {
 }
 
 export default function AdminSettingsPage() {
-  const { profile, studio, user, refreshStudio } = useAuth();
+  const { profile, studio, user, refreshProfile, refreshStudio } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [phone, setPhone] = useState(profile?.phone || '');
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
   const [savingProfile, setSavingProfile] = useState(false);
 
   const [studioName, setStudioName] = useState(studio?.name || '');
@@ -86,6 +88,7 @@ export default function AdminSettingsPage() {
     if (profile) {
       setFullName(profile.full_name || '');
       setPhone(profile.phone || '');
+      setAvatarUrl(profile.avatar_url || '');
     }
   }, [profile]);
 
@@ -114,15 +117,37 @@ export default function AdminSettingsPage() {
     }
   }
 
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file (PNG, JPG, or WebP).');
+      return;
+    }
+    try {
+      const dataUrl = await resizeImageToDataUrl(file, 256);
+      setAvatarUrl(dataUrl);
+      toast.success('Photo loaded! Click "Save Profile" to update your profile picture.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not load profile picture.');
+    }
+  }
+
   async function saveProfile() {
     if (!profile) return;
     setSavingProfile(true);
-    const { error } = await supabase
+    const { data: updatedProfile, error } = await supabase
       .from('profiles')
-      .update({ full_name: fullName.trim(), phone: phone.trim() })
-      .eq('id', profile.id);
-    if (error) toast.error(error.message);
-    else toast.success('Your profile has been updated.');
+      .update({ full_name: fullName.trim(), phone: phone.trim(), avatar_url: avatarUrl.trim() })
+      .eq('id', profile.id)
+      .select()
+      .single();
+    if (error || !updatedProfile) {
+      toast.error(error?.message || 'Could not update profile.');
+    } else {
+      await refreshProfile();
+      toast.success('Your profile has been updated.');
+    }
     setSavingProfile(false);
   }
 
@@ -163,14 +188,45 @@ export default function AdminSettingsPage() {
 
       {/* Personal Profile */}
       <Card className="p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <Avatar className="w-16 h-16 border-2 border-primary/20">
-            <AvatarFallback className="bg-primary/10 text-primary font-serif text-xl">{getInitials(fullName)}</AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-serif text-lg">{fullName || 'Studio Owner'}</p>
-            <p className="text-sm text-muted-foreground">{user?.email}</p>
-            <p className="text-xs text-primary mt-1">Studio Owner</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-4">
+            <Avatar className="w-16 h-16 border-2 border-primary/20">
+              {avatarUrl && <AvatarImage src={avatarUrl} alt={fullName || 'Profile'} className="object-cover" />}
+              <AvatarFallback className="bg-primary/10 text-primary font-serif text-xl">{getInitials(fullName)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-serif text-lg">{fullName || 'Studio Owner'}</p>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
+              <p className="text-xs text-primary mt-1">Studio Owner</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarUpload}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => avatarInputRef.current?.click()}
+            >
+              <Upload className="w-4 h-4 mr-1.5" /> Upload Photo
+            </Button>
+            {avatarUrl && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setAvatarUrl('')}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4 mr-1.5" /> Remove
+              </Button>
+            )}
           </div>
         </div>
 

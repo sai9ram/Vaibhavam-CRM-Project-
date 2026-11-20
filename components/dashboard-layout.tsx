@@ -4,7 +4,7 @@ import { ReactNode, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   Camera, LayoutDashboard, Users, FolderKanban, UserCog,
@@ -141,6 +141,9 @@ export function DashboardLayout({ children, role }: { children: ReactNode; role:
         <div className="border-t border-border p-4">
           <div className="flex items-center gap-3 mb-3">
             <Avatar className="w-9 h-9">
+              {profile?.avatar_url && (
+                <AvatarImage src={profile.avatar_url} alt={profile.full_name || 'User'} className="object-cover" />
+              )}
               <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
                 {getInitials(profile?.full_name || 'User')}
               </AvatarFallback>
