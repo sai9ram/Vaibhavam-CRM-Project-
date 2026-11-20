@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
+import { useAuth } from '@/lib/auth-context';
 import { PageHeader } from '@/components/page-header';
 import { StatCard } from '@/components/stat-card';
 import { Card } from '@/components/ui/card';
@@ -15,6 +16,7 @@ import type { Project, Client, Payment } from '@/types/database';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, BarChart, Bar, CartesianGrid } from 'recharts';
 
 export default function AdminDashboard() {
+  const { studio } = useAuth();
   const [stats, setStats] = useState({ clients: 0, activeProjects: 0, completedProjects: 0, pendingDeliveries: 0, revenue: 0 });
   const [recentProjects, setRecentProjects] = useState<(Project & { client: Client })[]>([]);
   const [revenueData, setRevenueData] = useState<{ month: string; revenue: number }[]>([]);
@@ -108,11 +110,12 @@ export default function AdminDashboard() {
       />
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <StatCard label="Total Clients" value={stats.clients} icon={<Users className="w-5 h-5" />} accent="primary" />
         <StatCard label="Active Projects" value={stats.activeProjects} icon={<FolderKanban className="w-5 h-5" />} accent="warning" />
         <StatCard label="Completed" value={stats.completedProjects} icon={<CheckCircle2 className="w-5 h-5" />} accent="success" />
         <StatCard label="Pending Deliveries" value={stats.pendingDeliveries} icon={<Clock className="w-5 h-5" />} accent="destructive" />
+        <StatCard label="Total Income" value={formatCurrency(stats.revenue, studio?.currency)} icon={<DollarSign className="w-5 h-5" />} accent="success" />
       </div>
 
       {/* Revenue + Stage distribution */}
@@ -125,7 +128,7 @@ export default function AdminDashboard() {
             </div>
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Total Revenue</p>
-              <p className="font-serif text-2xl text-gradient-luxe">{formatCurrency(stats.revenue)}</p>
+              <p className="font-serif text-2xl text-gradient-luxe">{formatCurrency(stats.revenue, studio?.currency)}</p>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={250}>
@@ -141,7 +144,7 @@ export default function AdminDashboard() {
               <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `₹${v / 1000}k`} />
               <Tooltip
                 contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
-                formatter={(v: number) => [formatCurrency(v), 'Revenue']}
+                formatter={(v: number) => [formatCurrency(v, studio?.currency), 'Revenue']}
               />
               <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#revGradient)" />
             </AreaChart>
