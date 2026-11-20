@@ -133,7 +133,7 @@ export default function AdminSettingsPage() {
       return;
     }
     setSavingStudio(true);
-    const { error } = await supabase
+    const { data: updatedStudio, error } = await supabase
       .from('studios')
       .update({
         name: studioName.trim(),
@@ -141,9 +141,11 @@ export default function AdminSettingsPage() {
         brand_color: brandColor,
         logo_url: logoUrl.trim(),
       })
-      .eq('id', studio.id);
-    if (error) {
-      toast.error(error.message);
+      .eq('id', studio.id)
+      .select()
+      .single();
+    if (error || !updatedStudio) {
+      toast.error(error?.message || 'Could not save studio settings. Please check permissions and try again.');
     } else {
       await refreshStudio();
       toast.success('Studio design and settings updated live!');
