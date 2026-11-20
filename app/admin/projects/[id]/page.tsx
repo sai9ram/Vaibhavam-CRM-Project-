@@ -15,17 +15,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   ArrowLeft, Calendar, MapPin, DollarSign, CheckCircle2, Circle, Clock,
   Plus, Trash2, Users, Image as ImageIcon, MessageSquare, CreditCard,
-  Upload, Send, FileText, Video,
+  Upload, Send, FileText, Video, Receipt, FileSignature, Eye,
 } from 'lucide-react';
 import { formatDate, formatCurrency, formatDateTime, formatFileSize, getInitials, timeAgo } from '@/lib/format';
 import { STAGE_NAMES, MEDIA_CATEGORIES } from '@/types/database';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth-context';
-import type { Project, Client, ProjectStage, ProjectAssignment, MediaItem, Message, Payment, Profile, Conversation, StageStatus } from '@/types/database';
+import { InvoicePreviewDialog } from '@/components/invoice-preview-dialog';
+import { AgreementPreviewDialog } from '@/components/agreement-preview-dialog';
+import type {
+  Project, Client, ProjectStage, ProjectAssignment, MediaItem, Message,
+  Payment, Profile, Conversation, StageStatus, Invoice, Agreement,
+} from '@/types/database';
 
 export default function ProjectDetailPage() {
   const params = useParams();
-  const { profile } = useAuth();
+  const { profile, studio } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
   const [client, setClient] = useState<Client | null>(null);
   const [stages, setStages] = useState<ProjectStage[]>([]);
@@ -33,6 +38,8 @@ export default function ProjectDetailPage() {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [messages, setMessages] = useState<(Message & { sender: Profile })[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [teamMembers, setTeamMembers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +48,20 @@ export default function ProjectDetailPage() {
   const [mediaCategory, setMediaCategory] = useState<string>('edited_photo');
   const [mediaTitle, setMediaTitle] = useState('');
   const [paymentForm, setPaymentForm] = useState({ amount: '', type: 'advance', due_date: '' });
+  const [invoiceForm, setInvoiceForm] = useState({
+    invoice_number: '',
+    description: '',
+    amount: '',
+    tax_rate: '0',
+    due_date: '',
+    notes: '',
+  });
+  const [agreementForm, setAgreementForm] = useState({
+    title: 'Photography & Film Service Agreement',
+    terms_text: '',
+  });
+  const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
+  const [previewAgreement, setPreviewAgreement] = useState<Agreement | null>(null);
 
   useEffect(() => {
     if (params.id) loadProject(params.id as string);
@@ -67,19 +88,37 @@ export default function ProjectDetailPage() {
     const { data: clientData } = await supabase.from('clients').select('*').eq('id', proj.client_id).single();
     setClient(clientData);
 
-    const [{ data: stagesData }, { data: assignData }, { data: mediaData }, { data: convData }, { data: payData }, { data: teamData }] = await Promise.all([
+    const [{ data: stagesData }, { data: assignData }, { data: mediaData }, { data: convData }, { data: payData }, { data: teamData }, { data: invData }, { data: agrData }] = await Promise.all([
       supabase.from('project_stages').select('*').eq('project_id', id).order('stage_number'),
       supabase.from('project_assignments').select('*').eq('project_id', id),
       supabase.from('media').select('*').eq('project_id', id).order('created_at', { ascending: false }),
       supabase.from('conversations').select('*').eq('project_id', id).maybeSingle(),
       supabase.from('payments').select('*').eq('project_id', id).order('created_at', { ascending: false }),
       supabase.from('profiles').select('*').eq('role', 'editor'),
+      supabase.from('invoices').select('*').eq('project_id', id).order('created_at', { ascending: false }),
+      supabase.from('agreements').select('*').eq('project_id', id).order('created_at', { ascending: false }),
     ]);
 
     setStages(stagesData || []);
     setMedia(mediaData || []);
     setPayments(payData || []);
     setTeamMembers(teamData || []);
+    setInvoices((invData as Invoice[]) || []);
+    setAgreements((agrData as Agreement[]) || []);
+
+    setInvoiceForm(prev => ({
+      ...prev,
+      invoice_number: prev.invoice_number || `INV-${new Date().getFullYear()}-${String((invData?.length || 0) + 1).padStart(3, '0')}`,
+      description: prev.description || proj.package_name || proj.title || 'Photography Package',
+      amount: prev.amount || String(proj.package_amount || ''),
+    }));
+
+    setAgreementForm(prev => ({
+      ...prev,
+      terms_text:
+        prev.terms_text ||
+        `1. Services Covered\nThe Studio agrees to provide photography and/or videography coverage for "${proj.title}" (${proj.event_type}) on ${proj.event_date || 'the scheduled event date'} at ${proj.event_venue || 'the agreed venue'}.\n\n2. Package & Payment\nTotal package fee is ${formatCurrency(proj.package_amount || 0, studio?.currency)}. Booking advance is required to reserve the date, with the remaining balance due before final delivery.\n\n3. Delivery Timeline\nEdited photos and films will be delivered through the client portal in accordance with the 10-stage workflow.\n\n4. Copyright & Usage\nThe client receives full personal usage rights for all delivered photos and videos. The Studio retains the right to showcase selected highlights in its portfolio unless otherwise agreed in writing.`,
+    }));
 
     if (assignData && assignData.length > 0) {
       const userIds = assignData.map(a => a.user_id);
@@ -220,6 +259,80 @@ export default function ProjectDetailPage() {
     loadProject(project!.id);
   }
 
+  async function createInvoice() {
+    const amount = parseFloat(invoiceForm.amount);
+    const taxRate = parseFloat(invoiceForm.tax_rate || '0') || 0;
+    if (!invoiceForm.invoice_number.trim() || !invoiceForm.description.trim() || isNaN(amount) || amount <= 0) {
+      toast.error('Please enter an invoice number, description, and valid amount.');
+      return;
+    }
+    const subtotal = amount;
+    const taxAmount = Math.round((subtotal * taxRate) / 100);
+    const totalAmount = subtotal + taxAmount;
+
+    const { error } = await supabase.from('invoices').insert({
+      project_id: project!.id,
+      client_id: client!.id,
+      invoice_number: invoiceForm.invoice_number.trim(),
+      title: `Invoice for ${project!.title}`,
+      items: [{ description: invoiceForm.description.trim(), quantity: 1, unit_price: subtotal }],
+      subtotal,
+      tax_rate: taxRate,
+      tax_amount: taxAmount,
+      total_amount: totalAmount,
+      status: 'sent',
+      due_date: invoiceForm.due_date || null,
+      notes: invoiceForm.notes.trim(),
+    });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Invoice created and shared with the client!');
+      setInvoiceForm({ invoice_number: '', description: '', amount: '', tax_rate: '0', due_date: '', notes: '' });
+      loadProject(project!.id);
+    }
+  }
+
+  async function toggleInvoicePaid(inv: Invoice) {
+    const nextStatus = inv.status === 'paid' ? 'sent' : 'paid';
+    const { error } = await supabase.from('invoices').update({ status: nextStatus }).eq('id', inv.id);
+    if (error) toast.error(error.message);
+    else loadProject(project!.id);
+  }
+
+  async function deleteInvoice(id: string) {
+    const { error } = await supabase.from('invoices').delete().eq('id', id);
+    if (error) toast.error(error.message);
+    else loadProject(project!.id);
+  }
+
+  async function sendAgreement() {
+    if (!agreementForm.title.trim() || !agreementForm.terms_text.trim()) {
+      toast.error('Please enter an agreement title and terms.');
+      return;
+    }
+    const { error } = await supabase.from('agreements').insert({
+      project_id: project!.id,
+      client_id: client!.id,
+      title: agreementForm.title.trim(),
+      terms_text: agreementForm.terms_text.trim(),
+      status: 'sent',
+      studio_signer_name: profile?.full_name || studio?.name || 'Studio Owner',
+    });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Service agreement sent to client portal for signature!');
+      loadProject(project!.id);
+    }
+  }
+
+  async function deleteAgreement(id: string) {
+    const { error } = await supabase.from('agreements').delete().eq('id', id);
+    if (error) toast.error(error.message);
+    else loadProject(project!.id);
+  }
+
   if (loading) return <div className="p-8 animate-pulse space-y-4"><div className="h-8 w-64 bg-muted rounded" /><div className="h-64 bg-muted rounded-xl" /></div>;
 
   return (
@@ -253,6 +366,8 @@ export default function ProjectDetailPage() {
           <TabsTrigger value="media"><ImageIcon className="w-4 h-4 mr-2" /> Media</TabsTrigger>
           <TabsTrigger value="chat"><MessageSquare className="w-4 h-4 mr-2" /> Chat</TabsTrigger>
           <TabsTrigger value="payments"><CreditCard className="w-4 h-4 mr-2" /> Payments</TabsTrigger>
+          <TabsTrigger value="invoices"><Receipt className="w-4 h-4 mr-2" /> Invoices</TabsTrigger>
+          <TabsTrigger value="agreement"><FileSignature className="w-4 h-4 mr-2" /> Agreement</TabsTrigger>
         </TabsList>
 
         {/* STAGES TAB */}
@@ -504,7 +619,174 @@ export default function ProjectDetailPage() {
             )}
           </Card>
         </TabsContent>
+
+        {/* INVOICES TAB */}
+        <TabsContent value="invoices">
+          <Card className="p-6 space-y-6">
+            <div>
+              <h3 className="font-serif text-lg">Invoice Generator</h3>
+              <p className="text-sm text-muted-foreground">Create branded invoices that your client can view and download as PDF.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-4 rounded-lg bg-muted/50">
+              <Input
+                placeholder="Invoice #"
+                value={invoiceForm.invoice_number}
+                onChange={e => setInvoiceForm({ ...invoiceForm, invoice_number: e.target.value })}
+              />
+              <Input
+                placeholder="Service description"
+                value={invoiceForm.description}
+                onChange={e => setInvoiceForm({ ...invoiceForm, description: e.target.value })}
+                className="lg:col-span-2"
+              />
+              <Input
+                type="number"
+                placeholder="Amount"
+                value={invoiceForm.amount}
+                onChange={e => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
+              />
+              <Input
+                type="number"
+                placeholder="Tax %"
+                value={invoiceForm.tax_rate}
+                onChange={e => setInvoiceForm({ ...invoiceForm, tax_rate: e.target.value })}
+              />
+              <Input
+                type="date"
+                value={invoiceForm.due_date}
+                onChange={e => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })}
+              />
+              <Input
+                placeholder="Notes (optional)"
+                value={invoiceForm.notes}
+                onChange={e => setInvoiceForm({ ...invoiceForm, notes: e.target.value })}
+                className="sm:col-span-2 lg:col-span-3"
+              />
+              <Button onClick={createInvoice} className="bg-gradient-luxe text-white">
+                <Plus className="w-4 h-4 mr-2" /> Generate Invoice
+              </Button>
+            </div>
+
+            {invoices.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                <Receipt className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                <p className="text-sm">No invoices generated for this project yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {invoices.map(inv => (
+                  <div key={inv.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg bg-muted/50">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-medium text-sm">{inv.invoice_number}</span>
+                        <Badge variant={inv.status === 'paid' ? 'default' : 'outline'} className="capitalize">{inv.status}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Total: {formatCurrency(inv.total_amount, studio?.currency)} · Issued {formatDate(inv.issued_at)}
+                        {inv.due_date ? ` · Due ${formatDate(inv.due_date)}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setPreviewInvoice(inv)} className="h-8 text-xs">
+                        <Eye className="w-3.5 h-3.5 mr-1" /> View / PDF
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => toggleInvoicePaid(inv)} className="h-8 text-xs">
+                        {inv.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid'}
+                      </Button>
+                      <button onClick={() => deleteInvoice(inv.id)} className="text-muted-foreground hover:text-destructive p-1">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* AGREEMENT TAB */}
+        <TabsContent value="agreement">
+          <Card className="p-6 space-y-6">
+            <div>
+              <h3 className="font-serif text-lg">Service Agreement &amp; Digital Signature</h3>
+              <p className="text-sm text-muted-foreground">Send a service agreement to your client. They can sign it digitally from their portal.</p>
+            </div>
+
+            <div className="space-y-3 p-4 rounded-lg bg-muted/50">
+              <div className="space-y-1.5">
+                <Label>Agreement Title</Label>
+                <Input
+                  value={agreementForm.title}
+                  onChange={e => setAgreementForm({ ...agreementForm, title: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Agreement Terms</Label>
+                <textarea
+                  rows={7}
+                  value={agreementForm.terms_text}
+                  onChange={e => setAgreementForm({ ...agreementForm, terms_text: e.target.value })}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+              <Button onClick={sendAgreement} className="bg-gradient-luxe text-white">
+                <Send className="w-4 h-4 mr-2" /> Send Agreement to Client
+              </Button>
+            </div>
+
+            {agreements.length > 0 && (
+              <div className="space-y-2">
+                {agreements.map(agr => (
+                  <div key={agr.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg bg-muted/50">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{agr.title}</span>
+                        <Badge variant={agr.status === 'signed' ? 'default' : 'outline'} className="capitalize">
+                          {agr.status === 'signed' ? 'Signed' : agr.status}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {agr.status === 'signed'
+                          ? `Signed by ${agr.client_signer_name} on ${formatDate(agr.signed_at)}`
+                          : `Sent on ${formatDate(agr.created_at)} · Waiting for client signature`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setPreviewAgreement(agr)} className="h-8 text-xs">
+                        <Eye className="w-3.5 h-3.5 mr-1" /> View / PDF
+                      </Button>
+                      {agr.status !== 'signed' && (
+                        <button onClick={() => deleteAgreement(agr.id)} className="text-muted-foreground hover:text-destructive p-1">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      <InvoicePreviewDialog
+        invoice={previewInvoice}
+        open={!!previewInvoice}
+        onOpenChange={(o) => { if (!o) setPreviewInvoice(null); }}
+        studio={studio}
+        client={client}
+        project={project}
+      />
+
+      <AgreementPreviewDialog
+        agreement={previewAgreement}
+        open={!!previewAgreement}
+        onOpenChange={(o) => { if (!o) setPreviewAgreement(null); }}
+        studio={studio}
+        client={client}
+        project={project}
+      />
     </div>
   );
 }

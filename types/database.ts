@@ -10,6 +10,8 @@ export type MediaCategory = 'raw_preview' | 'edited_photo' | 'album_file' | 'tea
 export type PaymentStatus = 'pending' | 'paid';
 export type PaymentType = 'advance' | 'balance' | 'partial';
 export type AssignmentRole = 'lead_editor' | 'editor' | 'videographer' | 'assistant';
+export type InvoiceStatus = 'draft' | 'sent' | 'paid';
+export type AgreementStatus = 'draft' | 'sent' | 'signed';
 
 export const STAGE_NAMES = [
   'Booking Confirmed',
@@ -175,6 +177,47 @@ export interface Payment {
   created_at: string;
 }
 
+export interface InvoiceItem {
+  description: string;
+  quantity: number;
+  unit_price: number;
+}
+
+export interface Invoice {
+  id: string;
+  studio_id?: string;
+  project_id: string;
+  client_id: string;
+  invoice_number: string;
+  title: string;
+  items: InvoiceItem[];
+  subtotal: number;
+  tax_rate: number;
+  tax_amount: number;
+  total_amount: number;
+  status: InvoiceStatus;
+  due_date: string | null;
+  issued_at: string;
+  notes: string;
+  created_at: string;
+}
+
+export interface Agreement {
+  id: string;
+  studio_id?: string;
+  project_id: string;
+  client_id: string;
+  title: string;
+  terms_text: string;
+  status: AgreementStatus;
+  studio_signer_name: string;
+  client_signer_name: string;
+  signature_data_url: string;
+  signed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -189,6 +232,8 @@ export interface Database {
       conversations: { Row: Conversation; Insert: Partial<Conversation>; Update: Partial<Conversation> };
       messages: { Row: Message; Insert: Partial<Message>; Update: Partial<Message> };
       payments: { Row: Payment; Insert: Partial<Payment>; Update: Partial<Payment> };
+      invoices: { Row: Invoice; Insert: Partial<Invoice>; Update: Partial<Invoice> };
+      agreements: { Row: Agreement; Insert: Partial<Agreement>; Update: Partial<Agreement> };
     };
   };
 }
