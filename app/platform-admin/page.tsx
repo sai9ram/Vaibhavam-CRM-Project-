@@ -335,107 +335,134 @@ export default function PlatformMasterAdminPage() {
                 No studios match your filter.
               </div>
             ) : (
-              <div className="divide-y divide-border/60">
-                {filteredStudios.map((s) => {
-                  const pct = s.storage_limit_bytes > 0
-                    ? Math.min(100, Math.round((s.storage_used_bytes / s.storage_limit_bytes) * 100))
-                    : 0;
-                  const isSuspended = !s.is_active || s.subscription_status === 'canceled';
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-border/60 bg-muted/30 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                      <th className="py-3 px-5">Studio</th>
+                      <th className="py-3 px-4">Plan &amp; Status</th>
+                      <th className="py-3 px-4">Storage</th>
+                      <th className="py-3 px-4">Usage</th>
+                      <th className="py-3 px-5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60 text-sm">
+                    {filteredStudios.map((s) => {
+                      const pct = s.storage_limit_bytes > 0
+                        ? Math.min(100, Math.round((s.storage_used_bytes / s.storage_limit_bytes) * 100))
+                        : 0;
+                      const isSuspended = !s.is_active || s.subscription_status === 'canceled';
 
-                  return (
-                    <div
-                      key={s.id}
-                      className="p-4 sm:px-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-muted/20 transition-colors"
-                    >
-                      {/* Identity */}
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-serif text-sm shrink-0">
-                          {getInitials(s.name)}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm truncate">{s.name}</span>
-                            <span className="text-[11px] text-muted-foreground font-mono">/{s.slug}</span>
-                          </div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            {s.owner_email || s.owner_name || 'No owner'} · Joined {formatDate(s.created_at)}
-                          </div>
-                        </div>
-                      </div>
+                      return (
+                        <tr key={s.id} className="hover:bg-muted/20 transition-colors">
+                          {/* Studio */}
+                          <td className="py-4 px-5">
+                            <div className="flex items-center gap-3 min-w-[220px]">
+                              <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-serif text-sm shrink-0">
+                                {getInitials(s.name)}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-medium text-foreground truncate">{s.name}</div>
+                                <div className="text-xs text-muted-foreground truncate">
+                                  {s.owner_email || s.owner_name || 'No owner'} · Joined {formatDate(s.created_at)}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
 
-                      {/* Metrics & Actions */}
-                      <div className="flex flex-wrap items-center gap-4 lg:gap-6">
-                        <div className="text-xs space-y-1 min-w-[110px]">
-                          <div className="flex justify-between text-muted-foreground">
-                            <span>{formatFileSize(s.storage_used_bytes)}</span>
-                            <span>{formatFileSize(s.storage_limit_bytes)}</span>
-                          </div>
-                          <div className="w-28 h-1.5 bg-muted rounded-full overflow-hidden">
-                            <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
+                          {/* Plan & Status */}
+                          <td className="py-4 px-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="capitalize text-xs font-normal">
+                                {s.plan.replace('_', ' ')}
+                              </Badge>
+                              <span
+                                className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-0.5 rounded-full font-medium capitalize ${
+                                  isSuspended
+                                    ? 'bg-destructive/10 text-destructive'
+                                    : s.subscription_status === 'active'
+                                    ? 'bg-success/10 text-success'
+                                    : 'bg-warning/10 text-warning'
+                                }`}
+                              >
+                                <span
+                                  className={`w-1.5 h-1.5 rounded-full ${
+                                    isSuspended
+                                      ? 'bg-destructive'
+                                      : s.subscription_status === 'active'
+                                      ? 'bg-success'
+                                      : 'bg-warning'
+                                  }`}
+                                />
+                                {isSuspended ? 'Suspended' : s.subscription_status}
+                              </span>
+                            </div>
+                          </td>
 
-                        <div className="text-xs text-muted-foreground whitespace-nowrap">
-                          {s.project_count}/{s.max_projects} proj · {s.team_count}/{s.max_team_members} team
-                        </div>
+                          {/* Storage */}
+                          <td className="py-4 px-4 whitespace-nowrap">
+                            <div className="w-36 space-y-1.5">
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span className="text-foreground font-medium">{formatFileSize(s.storage_used_bytes)}</span>
+                                <span>of {formatFileSize(s.storage_limit_bytes)}</span>
+                              </div>
+                              <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                                <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+                          </td>
 
-                        <div className="flex items-center gap-1.5">
-                          <Badge variant="outline" className="capitalize text-[11px] font-normal">
-                            {s.plan.replace('_', ' ')}
-                          </Badge>
-                          <span
-                            className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full ${
-                              isSuspended
-                                ? 'bg-destructive/10 text-destructive'
-                                : s.subscription_status === 'active'
-                                ? 'bg-success/10 text-success'
-                                : 'bg-warning/10 text-warning'
-                            }`}
-                          >
-                            {isSuspended ? 'Suspended' : s.subscription_status}
-                          </span>
-                        </div>
+                          {/* Usage */}
+                          <td className="py-4 px-4 whitespace-nowrap">
+                            <div className="text-xs space-y-0.5">
+                              <div className="text-foreground font-medium">{s.project_count} / {s.max_projects} projects</div>
+                              <div className="text-muted-foreground">{s.team_count} / {s.max_team_members} team members</div>
+                            </div>
+                          </td>
 
-                        {/* 360° Action Buttons */}
-                        <div className="flex items-center gap-1">
-                          <Button size="sm" variant="ghost" onClick={() => openEditModal(s)} className="h-8 px-2.5 text-xs">
-                            <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={busy}
-                            onClick={() => callManageApi({ action: 'extend_trial', studio_id: s.id, days: 14 }, `Extended trial +14d for ${s.name}.`)}
-                            className="h-8 px-2 text-xs"
-                            title="Extend trial by 14 days"
-                          >
-                            <CalendarPlus className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={busy}
-                            onClick={() => callManageApi({ action: 'toggle_active', studio_id: s.id }, s.is_active ? `${s.name} suspended.` : `${s.name} activated.`)}
-                            className={`h-8 px-2 text-xs ${s.is_active ? 'text-muted-foreground hover:text-destructive' : 'text-success'}`}
-                            title={s.is_active ? 'Suspend studio' : 'Activate studio'}
-                          >
-                            {s.is_active ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={busy}
-                            onClick={() => setDeleteTarget(s)}
-                            className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
-                            title="Delete studio"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                          {/* Actions */}
+                          <td className="py-4 px-5 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center gap-1.5">
+                              <Button size="sm" variant="outline" onClick={() => openEditModal(s)} className="h-8 px-2.5 text-xs">
+                                <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={busy}
+                                onClick={() => callManageApi({ action: 'extend_trial', studio_id: s.id, days: 14 }, `Extended trial +14 days for ${s.name}.`)}
+                                className="h-8 px-2.5 text-xs"
+                                title="Extend free trial by 14 days"
+                              >
+                                <CalendarPlus className="w-3.5 h-3.5 mr-1" /> +14d
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={busy}
+                                onClick={() => callManageApi({ action: 'toggle_active', studio_id: s.id }, s.is_active ? `${s.name} suspended.` : `${s.name} activated.`)}
+                                className={`h-8 px-2 text-xs ${s.is_active ? 'text-muted-foreground hover:text-destructive' : 'text-success'}`}
+                                title={s.is_active ? 'Suspend studio' : 'Activate studio'}
+                              >
+                                {s.is_active ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={busy}
+                                onClick={() => setDeleteTarget(s)}
+                                className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
+                                title="Delete studio permanently"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </Card>
