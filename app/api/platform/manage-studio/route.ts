@@ -155,14 +155,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    // 3. DELETE STUDIO + ITS USERS
+    // 3. DELETE STUDIO + ITS USERS (never delete platform admins)
     if (action === 'delete_studio') {
+      // Detach any platform admin attached to this studio first so their profile survives
+      await auth.supabaseAdmin
+        .from('profiles')
+        .update({ studio_id: null })
+        .eq('studio_id', studioId)
+        .eq('is_platform_admin', true);
+
       const { data: studioProfiles } = await auth.supabaseAdmin
         .from('profiles')
-        .select('id')
+        .select('id, is_platform_admin')
         .eq('studio_id', studioId);
 
-      const userIds = (studioProfiles || []).map((p) => p.id).filter((id) => id !== auth.user.id);
+      const userIds = (studioProfiles || [])
+        .filter((p) => !p.is_platform_admin && p.id !== auth.user.id)
+        .map((p) => p.id);
 
       const { error: delErr } = await auth.supabaseAdmin.from('studios').delete().eq('id', studioId);
       if (delErr) return NextResponse.json({ error: delErr.message }, { status: 400 });

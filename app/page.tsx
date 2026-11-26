@@ -23,7 +23,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user && profile) {
-      redirectByRole(profile.role, router);
+      redirectByRole(profile, router);
     }
   }, [user, profile, loading, router]);
 
@@ -197,8 +197,12 @@ export default function LoginPage() {
   );
 }
 
-function redirectByRole(role: string, router: ReturnType<typeof useRouter>) {
-  if (role === 'super_admin') router.push('/admin');
-  else if (role === 'editor') router.push('/editor');
+function redirectByRole(
+  profile: { role: string; is_platform_admin?: boolean },
+  router: ReturnType<typeof useRouter>
+) {
+  if (profile.is_platform_admin) router.push('/platform-admin');
+  else if (profile.role === 'super_admin') router.push('/admin');
+  else if (profile.role === 'editor') router.push('/editor');
   else router.push('/portal');
 }

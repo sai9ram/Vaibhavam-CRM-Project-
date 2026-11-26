@@ -15,7 +15,7 @@ import { formatCurrency, formatDate, formatFileSize, getInitials } from '@/lib/f
 import { toast } from 'sonner';
 import {
   ShieldCheck, Search, ArrowLeft, RefreshCw, Plus, Pencil,
-  Trash2, CalendarPlus, Ban, CheckCircle2, Loader2,
+  Trash2, CalendarPlus, Ban, CheckCircle2, Loader2, LogOut,
 } from 'lucide-react';
 
 interface PlatformStudio {
@@ -64,7 +64,7 @@ const GB = 1024 * 1024 * 1024;
 
 export default function PlatformMasterAdminPage() {
   const router = useRouter();
-  const { user, session, loading: authLoading } = useAuth();
+  const { user, profile, session, loading: authLoading, signOut } = useAuth();
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [studios, setStudios] = useState<PlatformStudio[]>([]);
   const [transactions, setTransactions] = useState<PlatformTransaction[]>([]);
@@ -243,9 +243,11 @@ export default function PlatformMasterAdminPage() {
         {/* Minimalist Top Bar */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border/60">
           <div>
-            <Link href="/admin" className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground mb-1.5">
-              <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back to Studio
-            </Link>
+            {profile?.studio_id && (
+              <Link href="/admin" className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground mb-1.5">
+                <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back to Studio
+              </Link>
+            )}
             <div className="flex items-center gap-2.5">
               <h1 className="font-serif text-2xl sm:text-3xl tracking-tight">SureShotz Master</h1>
               <Badge variant="outline" className="text-[11px] font-normal">360° Admin</Badge>
@@ -257,6 +259,14 @@ export default function PlatformMasterAdminPage() {
             </Button>
             <Button size="sm" onClick={() => setAddOpen(true)} className="h-9 bg-gradient-luxe text-white">
               <Plus className="w-4 h-4 mr-1.5" /> New Studio
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => { await signOut(); router.push('/'); }}
+              className="h-9 text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="w-3.5 h-3.5 mr-1.5" /> Sign out
             </Button>
           </div>
         </header>
