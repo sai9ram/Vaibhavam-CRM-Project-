@@ -90,6 +90,7 @@ export interface Profile {
   full_name: string;
   phone: string;
   avatar_url: string;
+  is_platform_admin?: boolean;
   created_at: string;
 }
 

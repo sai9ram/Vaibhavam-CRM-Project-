@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   Camera, LayoutDashboard, Users, FolderKanban, UserCog,
-  Image, MessageSquare, BarChart3, LogOut, Menu, Settings, Calendar, CreditCard,
+  Image, MessageSquare, BarChart3, LogOut, Menu, Settings, Calendar, CreditCard, ShieldCheck,
 } from 'lucide-react';
 import { TrialBanner } from '@/components/trial-banner';
 import { getInitials, formatFileSize } from '@/lib/format';
@@ -118,6 +118,17 @@ export function DashboardLayout({ children, role }: { children: ReactNode; role:
 
         <div className="flex-1 py-4 overflow-y-auto scrollbar-thin">
           <NavList />
+          {role === 'admin' && profile?.is_platform_admin && (
+            <div className="px-3 mt-4 pt-4 border-t border-border">
+              <button
+                onClick={() => { router.push('/platform-admin'); setMobileOpen(false); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary bg-primary/5 hover:bg-primary/10 transition-all"
+              >
+                <ShieldCheck style={{ width: 18, height: 18 }} />
+                Platform Master
+              </button>
+            </div>
+          )}
         </div>
 
         {role === 'admin' && studio && (
