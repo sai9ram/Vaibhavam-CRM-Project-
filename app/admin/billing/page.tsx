@@ -44,7 +44,7 @@ export default function AdminBillingPage() {
   async function loadPlans() {
     const { data } = await supabase.from('platform_plans').select('*');
     if (data && data.length > 0) {
-      const order = { starter: 1, pro: 2, studio: 3 };
+      const order: Record<string, number> = { starter: 1, pro: 2, studio: 3 };
       const mapped: PlanConfig[] = data
         .map((row) => {
           const fallback = SAAS_PLANS[row.id as keyof typeof SAAS_PLANS];
