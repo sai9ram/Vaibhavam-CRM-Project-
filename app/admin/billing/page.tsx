@@ -33,11 +33,42 @@ function loadRazorpayScript(): Promise<boolean> {
 export default function AdminBillingPage() {
   const { studio, session, refreshStudio } = useAuth();
   const [transactions, setTransactions] = useState<BillingTransaction[]>([]);
+  const [plans, setPlans] = useState<PlanConfig[]>(Object.values(SAAS_PLANS));
   const [busyPlan, setBusyPlan] = useState<string | null>(null);
 
   useEffect(() => {
+    loadPlans();
     if (studio?.id) loadTransactions();
   }, [studio?.id]);
+
+  async function loadPlans() {
+    const { data } = await supabase.from('platform_plans').select('*');
+    if (data && data.length > 0) {
+      const order = { starter: 1, pro: 2, studio: 3 };
+      const mapped: PlanConfig[] = data
+        .map((row) => {
+          const fallback = SAAS_PLANS[row.id as keyof typeof SAAS_PLANS];
+          const gb = Number(row.storage_limit_gb || 50);
+          return {
+            id: row.id,
+            name: row.name || fallback?.name || row.id,
+            tagline: row.tagline || fallback?.tagline || '',
+            priceInr: Number(row.price_inr ?? fallback?.priceInr ?? 0),
+            priceUsd: Number(row.price_usd ?? fallback?.priceUsd ?? 0),
+            storageLimitBytes: gb * 1024 * 1024 * 1024,
+            storageLabel: gb >= 1024 ? `${Math.round(gb / 1024)} TB Storage` : `${gb} GB Storage`,
+            maxProjects: Number(row.max_projects ?? fallback?.maxProjects ?? 50),
+            maxTeamMembers: Number(row.max_team_members ?? fallback?.maxTeamMembers ?? 5),
+            recommended: Boolean(row.recommended),
+            features: Array.isArray(row.features) && row.features.length > 0
+              ? row.features
+              : fallback?.features || [],
+          };
+        })
+        .sort((a, b) => (order[a.id] || 99) - (order[b.id] || 99));
+      setPlans(mapped);
+    }
+  }
 
   async function loadTransactions() {
     const { data } = await supabase
@@ -176,7 +207,7 @@ export default function AdminBillingPage() {
 
       {/* Plan Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {Object.values(SAAS_PLANS).map((plan) => {
+        {plans.map((plan) => {
           const isCurrent = studio?.plan === plan.id && studio?.subscription_status === 'active';
           return (
             <Card
